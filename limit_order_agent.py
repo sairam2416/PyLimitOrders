@@ -1,9 +1,16 @@
 from trading_framework.execution_client import ExecutionClient, ExecutionException
 from trading_framework.price_listener import PriceListener
+import random
 
+class ExecutionClient:
+
+    def get_current_price(self, product_id):
+        # In a real system, this method would fetch the current price from a market data feed or API
+        prices = {'IBM': 100.5, 'GOOGLE': 1200.0, 'E&Y': 55.0, 'JPMC': 145.0}
+        return prices.get(product_id, None)
 
 class LimitOrderAgent(PriceListener):
-    def __init__(self, execution_client: ExecutionClient) -> None:
+    def __init__(self, execution_client: ExecutionClient):
         """
         :param execution_client: can be used to buy or sell - see ExecutionClient protocol definition
         """
@@ -12,35 +19,48 @@ class LimitOrderAgent(PriceListener):
         self.orders = []
 
     def on_price_tick(self, product_id: str, price: float):
-        # see PriceListener protocol and readme file
-        pass
-        # Executing orders via an ExecutionClient instance
-        self.execute_orders(product_id, price)
+        # Fetching the current market price of the product
+        print(f"Price tick for {product_id}: {price}")
+        self.retry_held_orders(product_id, price)
 
-    def execute_orders(self, product_id: str, price: float):
-        executed_orders = []
-        for order in self.orders:
+    def retry_held_orders(self, product_id: str, price: float):
+        held_orders = [order for order in self.orders if order[0] in ['buy', 'sell'] and order[1] == product_id]
+        for order in held_orders:
             flag, order_product_id, amount, limit = order
-            if product_id == order_product_id:
-                print("exec",order_product_id, amount)
-                try:
-                    if flag == 'buy' and price <= limit:
-                        self.execution_client.buy(self,order_product_id, amount)
-                        executed_orders.append(order)
-                    elif flag == 'sell' and price >= limit:
-                        self.execution_client.sell(self, order_product_id, amount)
-                        executed_orders.append(order)
-                        # Removing the sold order
-                        self.orders.remove(order)
-                    else:
-                        raise ExecutionException
-                except ExecutionException:
-                    print(f"Failed to place an order due to invalid operation")
-        print("Executed Orders:",executed_orders)
+            if (flag == 'buy' and price <= limit) or (flag == 'sell' and price >= limit):
+                self.execute_order(product_id, price, order)
+
+    def get_current_price(self, product_id: str) -> float:
+        # Implement a method to fetch the current market price of the product
+        return self.execution_client.get_current_price(product_id)
+
+    def execute_order(self, product_id: str, price: float, order=None):
+        if order is None:
+            for order in self.orders:
+                if product_id == order[1]:
+                    break
+        flag, order_product_id, amount, limit = order
+        if product_id == order_product_id:
+            print("exec", order_product_id, amount)
+            try:
+                if flag == 'buy' and price <= limit:
+                    self._execute_buy_order(order_product_id, amount)
+                elif flag == 'sell' and price >= limit:
+                    self._execute_sell_order(order_product_id, amount)
+                    # Removing the sold order
+                    self.orders.remove(order)
+                else:
+                    raise ExecutionException
+            except ExecutionException:
+                print(f"Failed to place an order due to invalid operation")
 
     def add_order(self, flag: str, product_id: str, amount: int, limit: float):
         # Adding the bought order
         self.orders.append((flag, product_id, amount, limit))
 
-https://github.com/afob/PyLimitOrders/pull/19
-https://github.com/afob/PyLimitOrders/pull/20
+    def _execute_buy_order(self, product_id: str, amount: int):
+        self.execution_client.buy(self, product_id, amount)
+
+    def _execute_sell_order(self, product_id: str, amount: int):
+        self.execution_client.sell(self, product_id, amount)
+

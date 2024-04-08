@@ -34,18 +34,18 @@ class LimitOrderAgentTest(unittest.TestCase):
 
         def test_retry_held_orders_multiple_products(self):
         self.limit_order_agent.add_order('buy', 'IBM', 1000, 100.5)
-        self.limit_order_agent.add_order('buy', 'GOOG', 2000, 1200.0)
+        self.limit_order_agent.add_order('buy', 'GOOGLE', 2000, 1200.0)
         self.limit_order_agent.on_price_tick('IBM', 101.0)
-        self.limit_order_agent.on_price_tick('GOOG', 1150.0)
+        self.limit_order_agent.on_price_tick('GOOGLE', 1150.0)
         self.assertTrue(self.limit_order_agent.orders)
         self.limit_order_agent.on_price_tick('IBM', 99.0)
-        self.limit_order_agent.on_price_tick('GOOG', 1050.0)
+        self.limit_order_agent.on_price_tick('GOOGLE', 1050.0)
         self.assertFalse(self.limit_order_agent.orders)
         print("test_retry_held_orders_multiple_products Passed Successfully")
 
     def test_execute_orders_multiple_products(self):
         self.limit_order_agent.add_order('buy', 'IBM', 1000, 100.5)
-        self.limit_order_agent.add_order('sell', 'GOOG', 2000, 1150.0)
+        self.limit_order_agent.add_order('sell', 'GOOGLE', 2000, 1150.0)
         self.limit_order_agent.on_price_tick('IBM', 99.0)
         self.limit_order_agent.on_price_tick('GOOG', 1200.0)
         self.assertFalse(self.limit_order_agent.orders)

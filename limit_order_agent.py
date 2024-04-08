@@ -1,6 +1,5 @@
 from trading_framework.execution_client import ExecutionClient, ExecutionException
 from trading_framework.price_listener import PriceListener
-import random
 
 class ExecutionClient:
 
